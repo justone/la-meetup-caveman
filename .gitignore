@@ -1,0 +1,7 @@
+.env
+.cpcache
+.clj-kondo/.cache
+data
+
+migrations/drivers/*.jar
+migrations/mybatis-migrations*
