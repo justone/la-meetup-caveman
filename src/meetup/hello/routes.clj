@@ -1,6 +1,7 @@
 (ns meetup.hello.routes
   (:require [hiccup2.core :as hiccup]
             [meetup.system :as-alias system]
+            [meetup.page-html.core :as page-html]
             [next.jdbc :as jdbc]))
 
 (defn hello-handler
@@ -12,9 +13,8 @@
      :headers {"Content-Type" "text/html"}
      :body (str
             (hiccup/html
-             [:html
-              [:body
-               [:h1 (str "Hello, " planet)]]]))}))
+              (page-html/view
+                :body [:h1 (str "Hello, " planet)])))}))
 
 (defn routes
   [system]

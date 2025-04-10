@@ -32,7 +32,12 @@
   []
   (::system/env system))
 
+(defn cookie-store
+  []
+  (::system/cookie-store system))
+
 (comment
   (server)
   (db)
-  (env))
+  (env)
+  (cookie-store))

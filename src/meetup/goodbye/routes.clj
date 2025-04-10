@@ -1,5 +1,6 @@
 (ns meetup.goodbye.routes
   (:require [hiccup2.core :as hiccup]
+            [meetup.page-html.core :as page-html]
             [meetup.system :as-alias system]))
 
 (defn goodbye-handler
@@ -8,9 +9,8 @@
    :headers {"Content-Type" "text/html"}
    :body (str
           (hiccup/html
-           [:html
-            [:body
-             [:h1 "Goodbye, world"]]]))})
+            (page-html/view :title "Goodbye!"
+                            :body [:h1 "Goodbye, world"])))})
 
 (defn routes
   [system]

@@ -49,3 +49,7 @@ setup-migration:
 [working-directory: 'migrations']
 migrate *args:
     ./mybatis-migrations-3.4.0/bin/migrate {{args}}
+
+# Check for outdated dependencies
+outdated:
+    clojure -Sdeps '{:deps {com.github.liquidz/antq {:mvn/version "RELEASE"}}}' -M -m antq.core

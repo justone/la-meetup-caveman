@@ -1,7 +1,10 @@
 (ns meetup.system
-  (:require [meetup.routes :as routes]
+  (:require [meetup.jobs :as jobs]
+            [meetup.routes :as routes]
             [next.jdbc.connection :as connection]
-            [ring.adapter.jetty :as jetty])
+            [proletarian.worker :as worker]
+            [ring.adapter.jetty :as jetty]
+            [ring.middleware.session.cookie :as session-cookie])
   (:import (com.zaxxer.hikari HikariDataSource)
            (io.github.cdimascio.dotenv Dotenv)
            (org.eclipse.jetty.server Server)))
@@ -11,6 +14,10 @@
 (defn start-env
   []
   (Dotenv/load))
+
+(defn start-cookie-store
+  []
+  (session-cookie/cookie-store))
 
 (defn start-db
   [{:meetup.system/keys [env]}]
@@ -24,12 +31,29 @@
   [db]
   (HikariDataSource/.close db))
 
+(defn start-worker
+  [{::keys [db] :as system}]
+  (let [worker (worker/create-queue-worker
+                db
+                (partial #'jobs/process-job system)
+                {:proletarian/log #'jobs/logger
+                 :proletarian/serializer jobs/json-serializer})]
+    (worker/start! worker)
+    worker))
+
+(defn stop-worker
+  [worker]
+  (worker/stop! worker))
+
 (defn start-server
   [{::keys [env] :as system}]
-  (jetty/run-jetty
-   (partial #'routes/root-handler system)
-   {:port (Long/parseLong (Dotenv/.get env "PORT"))
-    :join? false}))
+  (let [handler (if (= (Dotenv/.get env "ENVIRONMENT") "development")
+                  (partial #'routes/root-handler system)
+                  (routes/root-handler system))]
+    (jetty/run-jetty
+      handler
+      {:port (Long/parseLong (Dotenv/.get env "PORT"))
+       :join? false})))
 
 (defn stop-server
   [server]
@@ -38,10 +62,13 @@
 (defn start-system
   []
   (let [system-so-far {::env (start-env)}
-        system-so-far (merge system-so-far {::db (start-db system-so-far)})]
+        system-so-far (merge system-so-far {::cookie-store (start-cookie-store)})
+        system-so-far (merge system-so-far {::db (start-db system-so-far)})
+        system-so-far (merge system-so-far {::worker (start-worker system-so-far)})]
     (merge system-so-far {::server (start-server system-so-far)})))
 
 (defn stop-system
   [system]
   (stop-server (::server system))
+  (stop-worker (::worker system))
   (stop-db (::db system)))
